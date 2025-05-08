@@ -6,10 +6,11 @@ This project aims to provide a **management** Azure Kubernetes Service (AKS) clu
 
 ### Prerequisites
 
+- [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+- [tflint](https://github.com/terraform-linters/tflint?tab=readme-ov-file#installation)
 - [gitleaks](https://github.com/gitleaks/gitleaks?tab=readme-ov-file#installing)
 - [checkov](https://www.checkov.io/2.Basics/Installing%20Checkov.html)
 - [direnv](https://direnv.net/docs/installation.html)
-- [tflint](https://github.com/terraform-linters/tflint?tab=readme-ov-file#installation)
 
 ### Setup Git pre-commit hooks
 

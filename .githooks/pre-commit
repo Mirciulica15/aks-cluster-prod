@@ -36,6 +36,12 @@ fi
 
 echo "✅ Checkov passed."
 
+echo "Formatting Terraform configuration ..."
+terraform fmt -recursive infrastructure/
+
+echo "✅ Formatting completed. Staging formatted Terraform files ..."
+git add -u infrastructure
+
 echo "✅ Proceeding with commit."
 
 exit 0
