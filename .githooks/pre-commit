@@ -12,6 +12,18 @@ fi
 
 echo "✅ Gitleaks passed."
 
+echo "Running Tflint on .tf files in ./infrastructure ..."
+tflint --chdir=infrastructure/
+
+TFLINT_RESULT=$?
+
+if [ $TFLINT_RESULT -ne 0 ]; then
+    echo "❌ Tflint found issues. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Tflint passed."
+
 echo "Running Checkov on .tf files in ./infrastructure ..."
 checkov --framework terraform -d infrastructure
 
