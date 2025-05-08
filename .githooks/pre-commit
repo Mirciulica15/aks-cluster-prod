@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "Running Gitleaks on files in . ..."
-gitleaks dir --config gitleaks.toml
+gitleaks dir -v --config gitleaks.toml
 
 GITLEAKS_RESULT=$?
 
