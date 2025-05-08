@@ -1,0 +1,29 @@
+#!/bin/sh
+
+echo "Running Gitleaks on files in . ..."
+gitleaks dir --config gitleaks.toml
+
+GITLEAKS_RESULT=$?
+
+if [ $GITLEAKS_RESULT -ne 0 ]; then
+    echo "❌ Gitleaks found issues. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Gitleaks passed."
+
+echo "Running Checkov on .tf files in ./infrastructure ..."
+checkov --framework terraform -d infrastructure
+
+CHECKOV_RESULT=$?
+
+if [ $CHECKOV_RESULT -ne 0 ]; then
+    echo "❌ Checkov found issues. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Checkov passed."
+
+echo "✅ Proceeding with commit."
+
+exit 0
