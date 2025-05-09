@@ -1,10 +1,11 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-echo "Running Gitleaks on files in . ..."
+set -euo pipefail
+
+echo "🔃 Running Gitleaks on files in . ..."
 gitleaks dir -v --config gitleaks.toml
 
 GITLEAKS_RESULT=$?
-
 if [ $GITLEAKS_RESULT -ne 0 ]; then
     echo "❌ Gitleaks found issues. Commit aborted."
     exit 1
@@ -12,11 +13,10 @@ fi
 
 echo "✅ Gitleaks passed."
 
-echo "Running Tflint on .tf files in ./infrastructure ..."
+echo "🔃 Running Tflint on .tf files in ./infrastructure ..."
 tflint --chdir=infrastructure/
 
 TFLINT_RESULT=$?
-
 if [ $TFLINT_RESULT -ne 0 ]; then
     echo "❌ Tflint found issues. Commit aborted."
     exit 1
@@ -24,11 +24,10 @@ fi
 
 echo "✅ Tflint passed."
 
-echo "Running Checkov on .tf files in ./infrastructure ..."
+echo "🔃 Running Checkov on .tf files in ./infrastructure ..."
 checkov --framework terraform -d infrastructure
 
 CHECKOV_RESULT=$?
-
 if [ $CHECKOV_RESULT -ne 0 ]; then
     echo "❌ Checkov found issues. Commit aborted."
     exit 1
@@ -36,16 +35,63 @@ fi
 
 echo "✅ Checkov passed."
 
-echo "Formatting Terraform configuration ..."
+echo "🔃 Formatting Terraform configuration ..."
 terraform fmt -recursive infrastructure/
 echo "✅ Formatting completed."
 
-echo "Running Terraform init to update .terraform.lock.hcl file ..."
+echo "🔃 Moving to infrastructure/ directory ..."
+cd infrastructure/ || exit 1
+
+CD_INFRASTRUCTURE_RESULT=$?
+if [ $CD_INFRASTRUCTURE_RESULT -ne 0 ]; then
+    echo "❌ Failed to change directory to infrastructure. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Successfully moved to infrastructure/ directory."
+
+echo "🔃 Running Terraform init ..."
 terraform init -upgrade
+
+TERRAFORM_INIT_RESULT=$?
+if [ $TERRAFORM_INIT_RESULT -ne 0 ]; then
+    echo "❌ Terraform init failed. Commit aborted."
+    exit 1
+fi
+
 echo "✅ Terraform init completed."
 
-echo "Staging changed files ..."
+echo "🔃 Running Terraform validate ..."
+terraform validate
+
+TERRAFORM_VALIDATE_RESULT=$?
+if [ $TERRAFORM_VALIDATE_RESULT -ne 0 ]; then
+    echo "❌ Terraform validate failed. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Terraform validate passed."
+
+echo "🔃 Moving back to root directory ..."
+cd .. || exit 1
+
+CD_ROOT_RESULT=$?
+if [ $CD_ROOT_RESULT -ne 0 ]; then
+    echo "❌ Failed to change directory to root. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Successfully moved back to root directory."
+
+echo "🔃 Staging changed files ..."
 git add .
+
+GIT_ADD_RESULT=$?
+if [ $GIT_ADD_RESULT -ne 0 ]; then
+    echo "❌ Git add failed. Commit aborted."
+    exit 1
+fi
+
 echo "✅ Staging completed."
 
 echo "✅ Proceeding with commit."

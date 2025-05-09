@@ -20,7 +20,7 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           echo "Terraform init..."
-          terraform init -lockfile=readonly
+          terraform init
           echo "Terraform validate..."
           terraform validate
           echo "Terraform plan..."
@@ -67,7 +67,7 @@ stages:
                   scriptLocation: 'inlineScript'
                   inlineScript: |
                     echo "Terraform init..."
-                    terraform init -lockfile=readonly
+                    terraform init
                     echo "Terraform apply started..."
                     terraform apply tfplan
                   addSpnToEnvironment: true
