@@ -7,7 +7,7 @@ pool:
 variables:
   terraformVersion: '1.11.3'
   azureSubscription: 'SPN-accesaplayground'
-  backendResourceGroupName: $(backendResourceGroupName)
+  backendResourceGroupName: 'rg-mircea-talu'
   backendStorageAccountName: 'stmirceatalu'
   backendContainerName: 'terraform'
   backendKey: 'managementcluster.tfstate'
@@ -23,6 +23,7 @@ stages:
         terraformVersion: $(terraformVersion)
 
     - task: TerraformTask@5
+      displayName: "Terraform Init"
       inputs:
         provider: 'azurerm'
         command: 'init'
@@ -34,12 +35,14 @@ stages:
         backendAzureRmKey: $(backendKey)
 
     - task: TerraformTask@5
+      displayName: "Terraform Validate"
       inputs:
         provider: 'azurerm'
         command: 'validate'
         workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
 
     - task: TerraformTask@5
+      displayName: "Terraform Plan"
       inputs:
         provider: 'azurerm'
         command: 'plan'
@@ -48,6 +51,7 @@ stages:
         environmentServiceNameAzureRM: $(azureSubscription)
 
     - task: PublishPipelineArtifact@1
+      displayName: "Publish tfplan"
       inputs:
         targetPath: '$(System.DefaultWorkingDirectory)/infrastructure/tfplan'
         artifact: 'tfplan'
@@ -65,16 +69,12 @@ stages:
         runOnce:
           deploy:
             steps:
-              - task: DownloadPipelineArtifact@2
-                inputs:
-                  artifact: 'tfplan'
-                  path: '$(Pipeline.Workspace)'
-
               - task: TerraformInstaller@1
                 inputs:
                   terraformVersion: $(terraformVersion)
 
               - task: TerraformTask@5
+                displayName: "Terraform Init"
                 inputs:
                   provider: 'azurerm'
                   command: 'init'
@@ -86,8 +86,10 @@ stages:
                   backendAzureRmKey: $(backendKey)
 
               - task: TerraformTask@5
+                displayName: "Terraform Apply"
                 inputs:
                   provider: 'azurerm'
                   command: 'apply'
-                  commandOptions: 'tfplan -auto-approve'
+                  workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
+                  commandOptions: '$(Pipeline.Workspace)/tfplan -auto-approve'
                   environmentServiceNameAzureRM: $(azureSubscription)
