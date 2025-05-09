@@ -1,0 +1,85 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: Plan
+  jobs:
+  - job: Plan
+    displayName: "Validate and Plan"
+    steps:
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
+        backendServiceArm: 'SPN-accesaplayground'
+        backendAzureRmResourceGroupName: 'rg-mircea-talu'
+        backendAzureRmStorageAccountName: 'stmirceatalu'
+        backendAzureRmContainerName: 'terraform'
+        backendAzureRmKey: 'managementcluster.tfstate'
+
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
+
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        commandOptions: '-out=tfplan'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
+        environmentServiceNameAzureRM: 'SPN-accesaplayground'
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/infrastructure/tfplan'
+        artifact: 'tfplan'
+        publishLocation: 'pipeline'
+
+- stage: Apply
+  displayName: "Apply"
+  dependsOn: Plan
+  condition: succeeded()
+  jobs:
+    - deployment: Apply
+      displayName: "Apply"
+      environment: 'management-cluster-prod'  
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: DownloadPipelineArtifact@2
+                inputs:
+                  artifact: 'tfplan'
+                  path: '$(Pipeline.Workspace)'
+
+              - task: TerraformInstaller@1
+                inputs:
+                  terraformVersion: 'latest'
+
+              - task: TerraformTask@5
+                inputs:
+                  provider: 'azurerm'
+                  command: 'init'
+                  workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
+                  backendServiceArm: 'SPN-accesaplayground'
+                  backendAzureRmResourceGroupName: 'rg-mircea-talu'
+                  backendAzureRmStorageAccountName: 'stmirceatalu'
+                  backendAzureRmContainerName: 'terraform'
+                  backendAzureRmKey: 'managementcluster.tfstate'
+
+              - task: TerraformTask@5
+                inputs:
+                  provider: 'azurerm'
+                  command: 'apply'
+                  commandOptions: 'tfplan -auto-approve'
+                  environmentServiceNameAzureRM: 'SPN-accesaplayground'
