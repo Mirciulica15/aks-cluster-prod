@@ -7,6 +7,13 @@ terraform {
   }
 
   required_version = ">= 1.11.3"
+
+  backend "azurerm" {
+    resource_group_name  = "rg-mircea-talu"
+    storage_account_name = "stmirceatalu"
+    container_name       = "terraform"
+    key                  = "managementcluster.tfstate"
+  }
 }
 
 provider "azurerm" {
