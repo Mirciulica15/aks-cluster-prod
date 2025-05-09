@@ -2,12 +2,8 @@ trigger:
 - main
 
 variables:
-  terraformVersion: '1.11.3'
+  terraformVersion: '1.11.4'
   azureSubscription: 'SPN-accesaplayground'
-  backendResourceGroupName: 'rg-mircea-talu'
-  backendStorageAccountName: 'stmirceatalu'
-  backendContainerName: 'terraform'
-  backendKey: 'managementcluster.tfstate'
 
 stages:
 - stage: Plan
@@ -15,45 +11,28 @@ stages:
   - job: Plan
     displayName: "Validate and Plan"
     pool:
-      vmImage: ubuntu-latest
+      vmImage: ubuntu-22.04
     steps:
-    - task: TerraformInstaller@1
+    - task: AzureCLI@2
       inputs:
-        terraformVersion: $(terraformVersion)
-
-    - task: TerraformTask@5
-      displayName: "Terraform Init"
-      inputs:
-        provider: 'azurerm'
-        command: 'init'
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Terraform init..."
+          terraform init
+          echo "Terraform validate..."
+          terraform validate
+          echo "Terraform plan..."
+          terraform plan -out=tfplan -input=false
+        addSpnToEnvironment: true
         workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
-        backendServiceArm: $(azureSubscription)
-        backendAzureRmResourceGroupName: $(backendResourceGroupName)
-        backendAzureRmStorageAccountName: $(backendStorageAccountName)
-        backendAzureRmContainerName: $(backendContainerName)
-        backendAzureRmKey: $(backendKey)
-
-    - task: TerraformTask@5
-      displayName: "Terraform Validate"
-      inputs:
-        provider: 'azurerm'
-        command: 'validate'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
-
-    - task: TerraformTask@5
-      displayName: "Terraform Plan"
-      inputs:
-        provider: 'azurerm'
-        command: 'plan'
-        commandOptions: '-out=tfplan'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
-        environmentServiceNameAzureRM: $(azureSubscription)
-
+    
     - task: PublishPipelineArtifact@1
       displayName: "Publish tfplan"
       inputs:
         targetPath: '$(System.DefaultWorkingDirectory)/infrastructure/tfplan'
-        artifact: 'tfplan'
+        artifactName: 'tfplan'
         publishLocation: 'pipeline'
 
 - stage: Apply
@@ -64,33 +43,30 @@ stages:
     - deployment: Apply
       displayName: "Apply"
       pool:
-        vmImage: ubuntu-latest
+        vmImage: ubuntu-22.04
       environment: 'management-cluster-prod'  
       strategy:
         runOnce:
           deploy:
             steps:
-              - task: TerraformInstaller@1
+              - checkout: self
+              
+              - task: DownloadPipelineArtifact@2
+                displayName: "Download tfplan to infra dir"
                 inputs:
-                  terraformVersion: $(terraformVersion)
-
-              - task: TerraformTask@5
-                displayName: "Terraform Init"
+                  buildType: 'current'
+                  artifactName: 'tfplan'
+                  targetPath: '$(System.DefaultWorkingDirectory)/infrastructure'
+              
+              - task: AzureCLI@2
                 inputs:
-                  provider: 'azurerm'
-                  command: 'init'
+                  azureSubscription: $(azureSubscription)
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    echo "Terraform init..."
+                    terraform init
+                    echo "Terraform apply started..."
+                    terraform apply tfplan
+                  addSpnToEnvironment: true
                   workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
-                  backendServiceArm: $(azureSubscription)
-                  backendAzureRmResourceGroupName: $(backendResourceGroupName)
-                  backendAzureRmStorageAccountName: $(backendStorageAccountName)
-                  backendAzureRmContainerName: $(backendContainerName)
-                  backendAzureRmKey: $(backendKey)
-
-              - task: TerraformTask@5
-                displayName: "Terraform Apply"
-                inputs:
-                  provider: 'azurerm'
-                  command: 'apply'
-                  workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
-                  commandOptions: '$(Pipeline.Workspace)/tfplan -auto-approve'
-                  environmentServiceNameAzureRM: $(azureSubscription)
