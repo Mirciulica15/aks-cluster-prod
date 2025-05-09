@@ -38,9 +38,15 @@ echo "✅ Checkov passed."
 
 echo "Formatting Terraform configuration ..."
 terraform fmt -recursive infrastructure/
+echo "✅ Formatting completed."
 
-echo "✅ Formatting completed. Staging formatted Terraform files ..."
-git add -u infrastructure
+echo "Running Terraform init to update .terraform.lock.hcl file ..."
+terraform init -upgrade
+echo "✅ Terraform init completed."
+
+echo "Staging changed files ..."
+git add .
+echo "✅ Staging completed."
 
 echo "✅ Proceeding with commit."
 

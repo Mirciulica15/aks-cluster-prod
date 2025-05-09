@@ -20,14 +20,14 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           echo "Terraform init..."
-          terraform init
+          terraform init -lockfile=readonly
           echo "Terraform validate..."
           terraform validate
           echo "Terraform plan..."
           terraform plan -out=tfplan -input=false
         addSpnToEnvironment: true
         workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
-    
+
     - task: PublishPipelineArtifact@1
       displayName: "Publish tfplan"
       inputs:
@@ -49,6 +49,8 @@ stages:
         runOnce:
           deploy:
             steps:
+              - download: none
+
               - checkout: self
               
               - task: DownloadPipelineArtifact@2
@@ -65,7 +67,7 @@ stages:
                   scriptLocation: 'inlineScript'
                   inlineScript: |
                     echo "Terraform init..."
-                    terraform init
+                    terraform init -lockfile=readonly
                     echo "Terraform apply started..."
                     terraform apply tfplan
                   addSpnToEnvironment: true
