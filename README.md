@@ -17,7 +17,7 @@ This project aims to provide a **management** Azure Kubernetes Service (AKS) clu
 1. Open Git Bash
 2. Run the `./init-dev.sh` script
 
-This will install the pre-commit **hooks**, which can be later enriched/modified from within the **.githooks** directory.
+This will install the pre-commit **hooks**, which can be later enriched/modified from within the **.githooks** directory. Every time you do a commit, the pre-commit will run and if the **exit status** is different than 0, the commit will be **dropped**.
 
 ### Setup environment variables
 
@@ -26,3 +26,24 @@ This will install the pre-commit **hooks**, which can be later enriched/modified
 3. Once you are finished, run `direnv allow` inside the `infrastructure/` directory.
 
 Now, whenever you `cd` into the `infrastructure/` directory, the environment variables will be **automatically** loaded into your `Git Bash` terminal, and you will be able to run Terraform commands and authenticate against Azure or other providers.
+
+## Infrastructure
+
+The infrastructure can be found in the `infrastructure/` directory. The main resource in the Terraform configuration is the AKS cluster (`aks.tf`).
+
+### Important attributes of the cluster
+
+- private
+- uses disk encryption
+- ephemeral OS disk
+- uses azure CNI
+- connected to a Log Analytics Workspace (`log-analytics-workspace.tf`)
+- system-assigned identity
+- tagged for production
+
+### Skipped checks
+
+Whenever a Checkov check is skipped, it **must be added** to the list below, along with the file it belongs to.
+
+- CKV_AZURE_170 (`aks.tf`): Intentionally using a free SKU to avoid costs
+- CKV_AZURE_232 (`aks.tf`): Intentionally using a single node pool for both system and user workloads to avoid costs
