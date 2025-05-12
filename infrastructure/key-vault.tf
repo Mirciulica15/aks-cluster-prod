@@ -3,15 +3,30 @@ resource "azurerm_key_vault" "main" {
   location                    = azurerm_resource_group.main.location
   resource_group_name         = azurerm_resource_group.main.name
   tenant_id                   = data.azurerm_client_config.current.tenant_id
-  sku_name                    = "standard"
+  sku_name                    = "premium"
   enabled_for_disk_encryption = true
   purge_protection_enabled    = true
 
-  public_network_access_enabled = false
+  public_network_access_enabled = true
 
   network_acls {
     default_action = "Deny"
     bypass         = "AzureServices"
+
+    ip_rules = concat(
+      [
+        # Azure DevOps hosted runners CIDRs
+        "13.107.6.0/24",
+        "13.107.9.0/24",
+        "13.107.42.0/24",
+        "13.107.43.0/24",
+        "150.171.22.0/24",
+        "150.171.23.0/24",
+        "150.171.73.0/24",
+        "150.171.74.0/24",
+        "150.171.75.0/24",
+        "150.171.76.0/24",
+    ], var.ip_range_whitelist)
   }
 }
 
@@ -42,4 +57,8 @@ resource "azurerm_key_vault_key" "key_disk_encryption" {
   key_opts = ["decrypt", "encrypt", "sign", "unwrapKey", "verify", "wrapKey"]
 
   expiration_date = timeadd(timestamp(), "8760h")
+
+  lifecycle {
+    ignore_changes = [expiration_date]
+  }
 }

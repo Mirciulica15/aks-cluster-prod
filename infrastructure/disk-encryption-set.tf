@@ -17,7 +17,7 @@ resource "azurerm_key_vault_access_policy" "disk_access_policy" {
   tenant_id = azurerm_disk_encryption_set.main.identity[0].tenant_id
   object_id = azurerm_disk_encryption_set.main.identity[0].principal_id
 
-  key_permissions = ["Create", "Delete", "Get", "Purge", "Recover", "Update", "List", "Decrypt", "Sign"]
+  key_permissions = ["Create", "Delete", "Get", "Purge", "Recover", "Update", "List", "Decrypt", "Sign", "WrapKey", "UnwrapKey"]
 }
 
 resource "azurerm_key_vault_access_policy" "service_principal_access_policy" {
@@ -26,5 +26,5 @@ resource "azurerm_key_vault_access_policy" "service_principal_access_policy" {
   tenant_id = data.azurerm_client_config.current.tenant_id
   object_id = data.azurerm_client_config.current.object_id
 
-  key_permissions = ["Create", "Delete", "Get", "Purge", "Recover", "Update", "List", "Decrypt", "Sign", "GetRotationPolicy"]
+  key_permissions = ["Create", "Delete", "Get", "Purge", "Recover", "Update", "List", "Decrypt", "Sign", "GetRotationPolicy", "WrapKey", "UnwrapKey"]
 }

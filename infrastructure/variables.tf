@@ -19,9 +19,17 @@ variable "environment" {
 variable "vm_size" {
   description = "The size of the virtual machines"
   type        = string
-  default     = "Standard_D2_v2"
+  default     = "Standard_D2s_v3"
   validation {
-    condition     = contains(["Standard_D2_v2"], var.vm_size)
-    error_message = "Value must be one of 'Standard_D2_v2'."
+    condition     = contains(["Standard_D2s_v3"], var.vm_size)
+    error_message = "Value must be one of 'Standard_D2s_v3'."
   }
+}
+
+variable "ip_range_whitelist" {
+  description = "List of IP addresses to whitelist in the Key Vault"
+  type        = list(string)
+  default = [
+    "91.240.5.0/24"
+  ]
 }

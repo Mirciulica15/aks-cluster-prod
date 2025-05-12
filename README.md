@@ -11,6 +11,7 @@ This project aims to provide a **management** Azure Kubernetes Service (AKS) clu
 - [gitleaks](https://github.com/gitleaks/gitleaks?tab=readme-ov-file#installing)
 - [checkov](https://www.checkov.io/2.Basics/Installing%20Checkov.html)
 - [direnv](https://direnv.net/docs/installation.html)
+- [infracost](https://www.infracost.io/docs/)
 
 ### Setup Git pre-commit hooks
 
@@ -47,3 +48,26 @@ Whenever a Checkov check is skipped, it **must be added** to the list below, alo
 
 - CKV_AZURE_170 (`aks.tf`): Intentionally using a free SKU to avoid costs
 - CKV_AZURE_232 (`aks.tf`): Intentionally using a single node pool for both system and user workloads to avoid costs
+- CKV_AZURE_115 (`aks.tf`): Intentionally not using private cluster to avoid the cost of setting up a Bastion VM or installing a VPN
+
+### Configuration
+
+Make sure to set the `variables.tf` values according to your needs.
+
+_Note_: The **ip_range_whitelist** is particularly important, make sure to set it to your proper CIDR ranges, in order to be able to access the Key Vault and the AKS API server.
+
+### Common issues
+
+#### 1. Subscription does not support encrpytion at rest
+
+Solution:
+
+```pwsh
+Register-AzProviderFeature -FeatureName "EncryptionAtHost" -ProviderNamespace "Microsoft.Compute"
+```
+
+You might have to **wait** for the registration to take place. You can check with the following command:
+
+```pwsh
+Get-AzProviderFeature -FeatureName "EncryptionAtHost" -ProviderNamespace "Microsoft.Compute"
+```
