@@ -1,0 +1,33 @@
+trigger:
+- none
+
+variables:
+  terraformVersion: '1.11.4'
+  azureSubscription: 'SPN-accesaplayground'
+
+stages:
+- stage: Destroy
+  jobs:
+  - job: Destroy
+    pool:
+      vmImage: ubuntu-22.04
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Exporting ARM environment variables..."
+          export ARM_CLIENT_ID=$servicePrincipalId
+          export ARM_CLIENT_SECRET=$servicePrincipalKey
+          export ARM_TENANT_ID=$tenantId
+          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          
+          echo "Terraform init..."
+          terraform init
+          
+          echo "Terraform destroy..."
+          terraform destroy -auto-approve
+        addSpnToEnvironment: true
+        workingDirectory: '$(System.DefaultWorkingDirectory)/infrastructure'
