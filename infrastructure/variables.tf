@@ -33,3 +33,9 @@ variable "ip_range_whitelist" {
     "91.240.5.0/24"
   ]
 }
+
+variable "azure_devops_organization_location" {
+  description = "The Azure DevOps organization location"
+  type        = string
+  default     = "westeurope"
+}

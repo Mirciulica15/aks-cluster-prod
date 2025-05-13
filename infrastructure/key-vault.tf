@@ -1,35 +1,3 @@
-data "http" "github_meta" {
-  url = "https://api.github.com/meta"
-  request_headers = {
-    Accept = "application/json"
-  }
-}
-
-locals {
-  github_meta    = jsondecode(data.http.github_meta.response_body)
-  raw_action_ips = local.github_meta.actions
-
-  action_ips_ipv4 = [
-    for ip in local.raw_action_ips : ip
-    if length(regexall(
-      "^\\d+\\.\\d+\\.\\d+\\.\\d+(/\\d{1,2})?$",
-      ip,
-    )) > 0
-  ]
-
-  all_ips = concat(var.ip_range_whitelist, local.action_ips_ipv4)
-  collapsed_ips = jsondecode(
-    data.external.collapsed_ips.result["collapsed_ips_json"]
-  )
-}
-
-data "external" "collapsed_ips" {
-  program = ["python", "${path.module}/scripts/collapse_ips.py"]
-  query = {
-    ips_json = jsonencode(local.all_ips)
-  }
-}
-
 resource "azurerm_key_vault" "main" {
   name                        = "kv-mgmt-${var.location}-${var.environment}"
   location                    = azurerm_resource_group.main.location
