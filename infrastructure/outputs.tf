@@ -7,3 +7,8 @@ output "kube_config" {
   value     = azurerm_kubernetes_cluster.main.kube_config_raw
   sensitive = true
 }
+
+output "collapsed_ips" {
+  value     = local.collapsed_ips
+  sensitive = false
+}

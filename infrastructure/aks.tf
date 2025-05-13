@@ -30,6 +30,12 @@ resource "azurerm_kubernetes_cluster" "main" {
     os_disk_size_gb         = 48
     max_pods                = 50
     host_encryption_enabled = true
+
+    upgrade_settings {
+      max_surge                     = "33%"
+      drain_timeout_in_minutes      = 30
+      node_soak_duration_in_minutes = 0
+    }
   }
 
   network_profile {
