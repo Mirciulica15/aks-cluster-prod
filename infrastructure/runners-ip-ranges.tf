@@ -5,16 +5,16 @@ data "http" "github_meta" {
   }
 }
 
-data "azurerm_network_service_tags" "azure_devops" {
+data "azurerm_network_service_tags" "azure_devops_runners" {
   location = var.azure_devops_organization_location
-  service  = "AzureDevOps"
+  service  = "AzureCloud"
 }
 
 locals {
   github_meta    = jsondecode(data.http.github_meta.response_body)
   raw_action_ips = local.github_meta.actions
 
-  azure_devops_ips_ipv4 = data.azurerm_network_service_tags.azure_devops.ipv4_cidrs
+  azure_devops_ips_ipv4 = data.azurerm_network_service_tags.azure_devops_runners.ipv4_cidrs
 
   action_ips_ipv4 = [
     for ip in local.raw_action_ips : ip
