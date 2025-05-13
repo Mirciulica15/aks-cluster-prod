@@ -58,4 +58,8 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags = {
     Environment = "Production"
   }
+
+  lifecycle {
+    ignore_changes = [tags["Creator"]]
+  }
 }

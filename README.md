@@ -60,7 +60,7 @@ _Note_: The **ip_range_whitelist** is particularly important, make sure to set i
 
 #### 1. Subscription does not support encrpytion at rest
 
-Solution:
+**Solution**:
 
 ```pwsh
 Register-AzProviderFeature -FeatureName "EncryptionAtHost" -ProviderNamespace "Microsoft.Compute"
@@ -70,4 +70,18 @@ You might have to **wait** for the registration to take place. You can check wit
 
 ```pwsh
 Get-AzProviderFeature -FeatureName "EncryptionAtHost" -ProviderNamespace "Microsoft.Compute"
+```
+
+#### 2. Resources updated in-place because of tag drift
+
+Adding **tags** to any of the Azure resources which support them from outside the Terraform configuration will trigger an **in-place update**. Normally, this is **harmless** as your resources will not be destroyed and recreated. However, certain resources, such as **Azure Kubernetes Service**, cannot have their tags updated when they are **stopped**. As a consequence, if your AKS cluster is stopped and Terraform detects a drift in its tags, it will try to update it in-place. Therefore, you will receive a **400 BadRequest** error, claiming that the only action you can take on the AKS cluster, while it is stopped, is to start it.
+
+**Solution**:
+
+Add your specific external tags in the **lifecycle** block for the desired resource/s
+
+```terraform
+lifecycle {
+  ignore_changes = [tags["Creator"]]
+}
 ```

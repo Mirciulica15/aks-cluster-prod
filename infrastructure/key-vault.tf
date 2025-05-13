@@ -15,6 +15,10 @@ resource "azurerm_key_vault" "main" {
 
     ip_rules = local.collapsed_ips
   }
+
+  lifecycle {
+    ignore_changes = [tags["Creator"]]
+  }
 }
 
 resource "azurerm_private_endpoint" "endpoint_key_vault" {
@@ -28,6 +32,10 @@ resource "azurerm_private_endpoint" "endpoint_key_vault" {
     is_manual_connection           = false
     private_connection_resource_id = azurerm_key_vault.main.id
     subresource_names              = ["vault"]
+  }
+
+  lifecycle {
+    ignore_changes = [tags["Creator"]]
   }
 }
 
@@ -46,6 +54,6 @@ resource "azurerm_key_vault_key" "key_disk_encryption" {
   expiration_date = timeadd(timestamp(), "8760h")
 
   lifecycle {
-    ignore_changes = [expiration_date]
+    ignore_changes = [tags["Creator"], expiration_date]
   }
 }

@@ -9,6 +9,10 @@ resource "azurerm_disk_encryption_set" "main" {
   identity {
     type = "SystemAssigned"
   }
+
+  lifecycle {
+    ignore_changes = [tags["Creator"]]
+  }
 }
 
 resource "azurerm_key_vault_access_policy" "disk_access_policy" {

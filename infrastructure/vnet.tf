@@ -3,6 +3,10 @@ resource "azurerm_virtual_network" "main" {
   address_space       = ["10.0.0.0/16"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
+
+  lifecycle {
+    ignore_changes = [tags["Creator"]]
+  }
 }
 
 resource "azurerm_subnet" "private_endpoints" {
@@ -17,6 +21,10 @@ resource "azurerm_network_security_group" "private_endpoints" {
   name                = "nsg-pes-${var.project}-${var.location}-${var.environment}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
+
+  lifecycle {
+    ignore_changes = [tags["Creator"]]
+  }
 }
 
 resource "azurerm_subnet_network_security_group_association" "private_endpoints" {
