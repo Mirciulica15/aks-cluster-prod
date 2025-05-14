@@ -2,6 +2,12 @@
 
 This project aims to provide a **management** Azure Kubernetes Service (AKS) cluster, to be used for deploying common useful resources for the development teams within the organization.
 
+## License
+
+This is an **open source** project licensed under the [MIT License](LICENSE).
+
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ## Getting Started
 
 ### Prerequisites
