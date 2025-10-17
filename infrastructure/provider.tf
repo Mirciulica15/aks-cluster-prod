@@ -2,17 +2,15 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "4.27.0"
+      version = "4.48.0"
     }
-
-    http = {
-      source  = "hashicorp/http"
-      version = "3.5.0"
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
     }
-
-    external = {
-      source  = "hashicorp/external"
-      version = "2.3.5"
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.25"
     }
   }
 
@@ -27,9 +25,59 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  features {
+    key_vault {
+      purge_soft_delete_on_destroy    = false
+      recover_soft_deleted_key_vaults = true
+    }
+  }
 }
 
-provider "http" {}
+# Use exec plugin for dynamic credentials
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.main.kube_config[0].host
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].cluster_ca_certificate)
 
-provider "external" {}
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "kubelogin"
+    args = [
+      "get-token",
+      "--environment",
+      "AzurePublicCloud",
+      "--server-id",
+      "6dae42f8-4368-4678-94ff-3960e28e3630", # Azure Kubernetes Service AAD Server
+      "--client-id",
+      data.azurerm_client_config.current.client_id,
+      "--tenant-id",
+      data.azurerm_client_config.current.tenant_id,
+      "--login",
+      "azurecli"
+    ]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = azurerm_kubernetes_cluster.main.kube_config[0].host
+    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config[0].cluster_ca_certificate)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "kubelogin"
+      args = [
+        "get-token",
+        "--environment",
+        "AzurePublicCloud",
+        "--server-id",
+        "6dae42f8-4368-4678-94ff-3960e28e3630",
+        "--client-id",
+        data.azurerm_client_config.current.client_id,
+        "--tenant-id",
+        data.azurerm_client_config.current.tenant_id,
+        "--login",
+        "azurecli"
+      ]
+    }
+  }
+}

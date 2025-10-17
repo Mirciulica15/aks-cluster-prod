@@ -2,6 +2,11 @@
 
 This project aims to provide a **management** Azure Kubernetes Service (AKS) cluster, to be used for deploying common useful resources for the development teams within the organization.
 
+## Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Comprehensive technical architecture documentation covering network design, security, observability, and operational details
+- **[CLAUDE.md](CLAUDE.md)** - Development guide for working with this repository using Claude Code
+
 ## License
 
 This is an **open source** project licensed under the [MIT License](LICENSE).
@@ -52,9 +57,30 @@ The infrastructure can be found in the `infrastructure/` directory. The main res
 
 Whenever a Checkov check is skipped, it **must be added** to the list below, along with the file it belongs to.
 
-- CKV_AZURE_170 (`aks.tf`): Intentionally using a free SKU to avoid costs
-- CKV_AZURE_232 (`aks.tf`): Intentionally using a single node pool for both system and user workloads to avoid costs
-- CKV_AZURE_115 (`aks.tf`): Intentionally not using private cluster to avoid the cost of setting up a Bastion VM or installing a VPN
+#### AKS Cluster (`aks.tf`)
+
+- CKV_AZURE_170: Intentionally using a free SKU to avoid costs
+- CKV_AZURE_232: Intentionally using a single node pool for both system and user workloads to avoid costs
+- CKV_AZURE_115: Intentionally not using private cluster to avoid the cost of setting up a Bastion VM or installing a VPN
+
+#### Key Vault (`key-vault.tf`)
+
+- CKV2_AZURE_32: Intentionally using public endpoint with IP whitelist instead of private endpoint to avoid additional networking costs
+
+#### Virtual Network (`vnet.tf`)
+
+- CKV2_AZURE_31 (nodes subnet): AKS manages network security for node subnet; NSG is not required as AKS applies its own security rules
+- CKV2_AZURE_31 (pods subnet): AKS manages network security for pod subnet; delegated subnet cannot have NSG as Cilium handles network policies
+
+#### Hubble UI (`hubble-ui.tf`)
+
+- CKV_K8S_43: Using version tags instead of digests for easier updates and readability
+- CKV_K8S_30: TODO - Add security context to pods and containers
+- CKV_K8S_28: TODO - Drop NET_RAW capability from containers
+- CKV_K8S_29: TODO - Apply security context to deployment
+- CKV_K8S_15: TODO - Set imagePullPolicy to Always
+- CKV_K8S_8: TODO - Add liveness probes to containers
+- CKV_K8S_9: TODO - Add readiness probes to containers
 
 ### Configuration
 
@@ -64,7 +90,7 @@ _Note_: The **ip_range_whitelist** is particularly important, make sure to set i
 
 ### Common issues
 
-#### 1. Subscription does not support encrpytion at rest
+#### 1. Subscription does not support encryption at rest
 
 **Solution**:
 

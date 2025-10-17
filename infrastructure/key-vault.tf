@@ -1,4 +1,5 @@
 resource "azurerm_key_vault" "main" {
+  #checkov:skip=CKV2_AZURE_32:Intentionally using public endpoint with IP whitelist instead of private endpoint to avoid additional networking costs
   name                        = "kv-mgmt-${var.location}-${var.environment}"
   location                    = azurerm_resource_group.main.location
   resource_group_name         = azurerm_resource_group.main.name
@@ -6,14 +7,14 @@ resource "azurerm_key_vault" "main" {
   sku_name                    = "premium"
   enabled_for_disk_encryption = true
   purge_protection_enabled    = true
+  rbac_authorization_enabled  = true
 
   public_network_access_enabled = true
 
   network_acls {
     default_action = "Deny"
     bypass         = "AzureServices"
-
-    ip_rules = local.collapsed_ips
+    ip_rules       = var.ip_range_whitelist
   }
 
   lifecycle {
@@ -21,22 +22,18 @@ resource "azurerm_key_vault" "main" {
   }
 }
 
-resource "azurerm_private_endpoint" "endpoint_key_vault" {
-  name                = "pip-kv-${var.project}-${var.location}-${var.environment}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  subnet_id           = azurerm_subnet.private_endpoints.id
+resource "azurerm_role_assignment" "self_uaa" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "User Access Administrator"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
 
-  private_service_connection {
-    name                           = "kv-private-connection"
-    is_manual_connection           = false
-    private_connection_resource_id = azurerm_key_vault.main.id
-    subresource_names              = ["vault"]
-  }
+resource "azurerm_role_assignment" "terraform_kv_admin" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Administrator"
+  principal_id         = data.azurerm_client_config.current.object_id
 
-  lifecycle {
-    ignore_changes = [tags["Creator"]]
-  }
+  depends_on = [azurerm_role_assignment.self_uaa]
 }
 
 resource "azurerm_key_vault_key" "key_disk_encryption" {
@@ -45,9 +42,7 @@ resource "azurerm_key_vault_key" "key_disk_encryption" {
   key_type     = "RSA-HSM"
   key_size     = 2048
 
-  depends_on = [
-    azurerm_key_vault_access_policy.service_principal_access_policy
-  ]
+  depends_on = [azurerm_role_assignment.terraform_kv_admin]
 
   key_opts = ["decrypt", "encrypt", "sign", "unwrapKey", "verify", "wrapKey"]
 

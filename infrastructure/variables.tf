@@ -27,15 +27,9 @@ variable "vm_size" {
 }
 
 variable "ip_range_whitelist" {
-  description = "List of IP addresses to whitelist in the Key Vault"
+  description = "List of IP addresses to whitelist in the Key Vault and AKS API"
   type        = list(string)
   default = [
     "91.240.5.0/24"
   ]
-}
-
-variable "azure_devops_organization_location" {
-  description = "The Azure DevOps organization location"
-  type        = string
-  default     = "westeurope"
 }

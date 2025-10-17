@@ -36,11 +36,22 @@ resource "azurerm_kubernetes_cluster" "main" {
       drain_timeout_in_minutes      = 30
       node_soak_duration_in_minutes = 0
     }
+
+    vnet_subnet_id = azurerm_subnet.nodes.id
+    pod_subnet_id  = azurerm_subnet.pods.id
   }
 
   network_profile {
-    network_plugin = "azure"
-    network_policy = "azure"
+    network_plugin     = "azure"
+    network_policy     = "cilium"
+    network_data_plane = "cilium"
+    service_cidr       = "172.16.0.0/16"
+    dns_service_ip     = "172.16.0.10"
+
+    advanced_networking {
+      observability_enabled = true
+      security_enabled      = true
+    }
   }
 
   key_vault_secrets_provider {
@@ -62,4 +73,11 @@ resource "azurerm_kubernetes_cluster" "main" {
   lifecycle {
     ignore_changes = [tags["Creator"]]
   }
+}
+
+# Grant yourself RBAC admin for Kubernetes resources
+resource "azurerm_role_assignment" "aks_rbac_admin" {
+  scope                = azurerm_kubernetes_cluster.main.id
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = data.azurerm_client_config.current.object_id
 }

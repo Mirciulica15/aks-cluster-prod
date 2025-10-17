@@ -15,20 +15,9 @@ resource "azurerm_disk_encryption_set" "main" {
   }
 }
 
-resource "azurerm_key_vault_access_policy" "disk_access_policy" {
-  key_vault_id = azurerm_key_vault.main.id
-
-  tenant_id = azurerm_disk_encryption_set.main.identity[0].tenant_id
-  object_id = azurerm_disk_encryption_set.main.identity[0].principal_id
-
-  key_permissions = ["Create", "Delete", "Get", "Purge", "Recover", "Update", "List", "Decrypt", "Sign", "WrapKey", "UnwrapKey"]
-}
-
-resource "azurerm_key_vault_access_policy" "service_principal_access_policy" {
-  key_vault_id = azurerm_key_vault.main.id
-
-  tenant_id = data.azurerm_client_config.current.tenant_id
-  object_id = data.azurerm_client_config.current.object_id
-
-  key_permissions = ["Create", "Delete", "Get", "Purge", "Recover", "Update", "List", "Decrypt", "Sign", "GetRotationPolicy", "WrapKey", "UnwrapKey"]
+# Grant Disk Encryption Set permissions via RBAC
+resource "azurerm_role_assignment" "disk_kv_crypto_user" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  principal_id         = azurerm_disk_encryption_set.main.identity[0].principal_id
 }
