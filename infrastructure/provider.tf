@@ -17,10 +17,10 @@ terraform {
   required_version = ">= 1.11.4"
 
   backend "azurerm" {
-    resource_group_name  = "rg-mircea-talu"
-    storage_account_name = "stmirceatalu"
+    resource_group_name  = "rg-accesa-dev"
+    storage_account_name = "staccesadev"
     container_name       = "terraform"
-    key                  = "managementcluster.tfstate"
+    key                  = "terraform.tfstate"
   }
 }
 

@@ -1,6 +1,6 @@
 resource "azurerm_key_vault" "main" {
   #checkov:skip=CKV2_AZURE_32:Intentionally using public endpoint with IP whitelist instead of private endpoint to avoid additional networking costs
-  name                        = "kv-mgmt-${var.location}-${var.environment}"
+  name                        = "kv-accd-${var.location}-${var.environment}"
   location                    = azurerm_resource_group.main.location
   resource_group_name         = azurerm_resource_group.main.name
   tenant_id                   = data.azurerm_client_config.current.tenant_id

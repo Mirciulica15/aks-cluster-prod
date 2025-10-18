@@ -19,10 +19,20 @@ variable "environment" {
 variable "vm_size" {
   description = "The size of the virtual machines"
   type        = string
-  default     = "Standard_D2s_v3"
+  default     = "Standard_D4as_v4"
   validation {
-    condition     = contains(["Standard_D2s_v3"], var.vm_size)
-    error_message = "Value must be one of 'Standard_D2s_v3'."
+    condition     = contains(["Standard_D2s_v3", "Standard_D4as_v4", "Standard_D4s_v3"], var.vm_size)
+    error_message = "Value must be one of 'Standard_D2s_v3', 'Standard_D4as_v4', or 'Standard_D4s_v3'."
+  }
+}
+
+variable "node_count" {
+  description = "The number of nodes in the default node pool"
+  type        = number
+  default     = 2
+  validation {
+    condition     = var.node_count >= 1 && var.node_count <= 10
+    error_message = "Node count must be between 1 and 10."
   }
 }
 
@@ -32,4 +42,24 @@ variable "ip_range_whitelist" {
   default = [
     "91.240.5.0/24"
   ]
+}
+
+# Observability Stack Variables
+
+variable "azure_ad_tenant_id" {
+  description = "Azure AD Tenant ID for Grafana OAuth2 authentication"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_ad_grafana_client_id" {
+  description = "Azure AD Application (Client) ID for Grafana OAuth2"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_ad_grafana_client_secret" {
+  description = "Azure AD Application Client Secret for Grafana OAuth2"
+  type        = string
+  sensitive   = true
 }

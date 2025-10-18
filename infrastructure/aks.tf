@@ -21,13 +21,13 @@ resource "azurerm_kubernetes_cluster" "main" {
     tenant_id          = data.azurerm_client_config.current.tenant_id
   }
 
-  # checkov:skip=CKV_AZURE_232: Intentionally using a single node pool for both system and user workloads to avoid costs
+  # checkov:skip=CKV_AZURE_232: Using a single node pool for both system and user workloads to balance cost and resilience
   default_node_pool {
     name                    = "npdefault"
-    node_count              = 1
+    node_count              = var.node_count
     vm_size                 = var.vm_size
     os_disk_type            = "Ephemeral"
-    os_disk_size_gb         = 48
+    os_disk_size_gb         = 100 # Maximum for D4as_v4 ephemeral (cache size limit)
     max_pods                = 50
     host_encryption_enabled = true
 
@@ -81,3 +81,15 @@ resource "azurerm_role_assignment" "aks_rbac_admin" {
   role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
   principal_id         = data.azurerm_client_config.current.object_id
 }
+
+# Grant kubelet managed identity RBAC Reader role for kube-system namespace
+# This allows the CSI driver to read secrets like azure-cloud-provider
+resource "azurerm_role_assignment" "kubelet_rbac_reader" {
+  scope                = "${azurerm_kubernetes_cluster.main.id}/namespaces/kube-system"
+  role_definition_name = "Azure Kubernetes Service RBAC Reader"
+  principal_id         = azurerm_kubernetes_cluster.main.kubelet_identity[0].object_id
+}
+
+# Note: The cluster's system-assigned identity automatically gets Contributor role
+# on the node resource group (MC_*) when the cluster is created by Azure.
+# This is required for the CSI driver to attach/detach disks to VMs.

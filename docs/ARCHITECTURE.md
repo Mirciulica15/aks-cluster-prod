@@ -238,6 +238,7 @@ This landing zone implements a **management AKS cluster** designed to host share
 
    - Pod-to-Pod: Cilium overlay network
    - Network policies: Cilium enforces L3/L4/L7 rules
+   - Namespace isolation: Enabled by default (see [Network Policies](#network-policies))
    - Observability: Hubble captures all flows
 
 3. **Egress Traffic:**
@@ -249,6 +250,86 @@ This landing zone implements a **management AKS cluster** designed to host share
 - **IP Whitelisting**: Configured via `ip_range_whitelist` variable
 - **Authentication**: Azure AD integration (local accounts disabled)
 - **Authorization**: Azure RBAC for Kubernetes resources
+
+### Network Policies
+
+**Implementation**: `network-policies.tf`
+
+**Strategy**: Default deny cross-namespace communication with explicit allows for system namespaces.
+
+**Policy Overview:**
+
+| Policy                                | Namespace    | Purpose                                                        |
+| ------------------------------------- | ------------ | -------------------------------------------------------------- |
+| `default-deny-cross-namespace`        | default      | Allow intra-namespace traffic, deny cross-namespace traffic    |
+| `kube-system-allow-all`               | kube-system  | Allow all traffic to/from kube-system (monitoring, operations) |
+| `allow-from-kube-system-default`      | default      | Allow ingress from kube-system (metrics collection)            |
+
+**Traffic Rules:**
+
+✅ **Allowed by Default:**
+- Pod → Pod in same namespace
+- Pod → CoreDNS (kube-system)
+- Pod → Internet/Azure services (egress)
+- kube-system → Any namespace (monitoring/ops)
+
+❌ **Denied by Default:**
+- Pod → Pod in different namespace
+- Pod → Service in different namespace
+
+**Creating New Namespaces:**
+
+When creating new application namespaces, you must apply the `allow-from-kube-system` policy to enable monitoring and metrics collection:
+
+```hcl
+resource "kubernetes_network_policy_v1" "allow_from_kube_system_myapp" {
+  metadata {
+    name      = "allow-from-kube-system"
+    namespace = "myapp-namespace"
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {}
+    }
+    policy_types = ["Ingress"]
+
+    ingress {
+      from {
+        namespace_selector {
+          match_labels = {
+            "kubernetes.io/metadata.name" = "kube-system"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Allowing Specific Cross-Namespace Communication:**
+
+Use the example policy in `network-policies.tf` (commented) to allow specific cross-namespace traffic. Example use case:
+
+- Frontend in `app-namespace` needs to access backend in `backend-namespace`
+- Create a policy in `backend-namespace` allowing ingress from pods labeled `role=frontend` in `app-namespace`
+
+**Testing Network Policies:**
+
+```bash
+# Test same-namespace connectivity (should work)
+kubectl run test-pod --image=busybox -n default -- wget -O- http://service.default.svc.cluster.local
+
+# Test cross-namespace connectivity (should fail)
+kubectl run test-pod --image=busybox -n default -- wget -O- http://service.other-namespace.svc.cluster.local
+
+# View all network policies
+kubectl get networkpolicies -A
+
+# Debug with Hubble UI
+kubectl port-forward -n kube-system svc/hubble-ui 8080:80
+# Visit http://localhost:8080 to see network flows and policy drops
+```
 
 ## Security Architecture
 
@@ -295,7 +376,8 @@ This landing zone implements a **management AKS cluster** designed to host share
 
 **Internal Security:**
 
-- Network Policies: Cilium-based enforcement
+- Network Policies: Cilium-based enforcement (see [Network Policies](#network-policies))
+- Namespace isolation: Default deny cross-namespace traffic
 - Pod Security: Azure Policy integration
 - Admission Control: Gatekeeper policies (e.g., block default namespace)
 
@@ -316,39 +398,29 @@ This landing zone implements a **management AKS cluster** designed to host share
 
 ## Observability Stack
 
-### Logging
+The cluster includes a comprehensive observability stack based on the Grafana LGTM pattern (Loki, Grafana, Tempo, Mimir/Prometheus) with OpenTelemetry for standardized telemetry collection.
 
-**Container Logs:**
+**Components:**
+- **Prometheus** - Metrics storage and querying (50 GB, 30-day retention)
+- **Loki** - Log aggregation (50 GB, 31-day retention)
+- **Tempo** - Distributed tracing (50 GB, 30-day retention)
+- **Grafana** - Unified visualization with Azure AD SSO
+- **Alertmanager** - Alert routing and management (10 GB)
+- **OpenTelemetry Collector** - Centralized telemetry gateway (3 replicas)
+- **Promtail** - Log collection agent (DaemonSet)
 
-- Collected by: OMS Agent (Container Insights)
-- Destination: Log Analytics Workspace
-- Retention: 30 days
+**Architecture Highlights:**
+- Namespace-level data isolation via Grafana RBAC
+- OpenTelemetry standard for instrumentation
+- Customer-managed encryption for all persistent volumes
+- Azure AD OAuth2 SSO for Grafana access
+- Pre-configured dashboards for Kubernetes monitoring
 
-**Kubernetes Events:**
+### Cilium/Hubble Network Observability
 
-- API server events
-- Controller manager events
-- Scheduler events
-
-### Metrics
-
-**Cluster Metrics:**
-
-- Node CPU, memory, disk usage
-- Pod resource utilization
-- API server latency
-
-**Cilium/Hubble Metrics:**
-
-- Flow metrics (source/destination context)
-- TCP connection metrics
-- DNS query metrics
-- Drop events
-
-### Tracing & Visualization
+In addition to the main observability stack, the cluster uses Cilium's Hubble for network flow visibility:
 
 **Hubble UI:**
-
 - Service map visualization
 - Real-time flow monitoring
 - Namespace-level filtering
@@ -361,9 +433,18 @@ kubectl port-forward -n kube-system svc/hubble-ui 12000:80
 # Open http://localhost:12000
 ```
 
-### Alerting
+### Detailed Documentation
 
-**Future Enhancements:**
+For comprehensive observability documentation, including:
+- Application instrumentation guides
+- Query examples for metrics/logs/traces
+- Grafana dashboard setup
+- Troubleshooting procedures
+- Cost optimization strategies
+
+See **[OBSERVABILITY.md](OBSERVABILITY.md)** for the complete guide.
+
+### Future Enhancements
 
 - Azure Monitor alerts on cluster health
 - Log Analytics queries for anomaly detection

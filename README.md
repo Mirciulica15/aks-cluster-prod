@@ -4,7 +4,8 @@ This project aims to provide a **management** Azure Kubernetes Service (AKS) clu
 
 ## Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Comprehensive technical architecture documentation covering network design, security, observability, and operational details
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Comprehensive technical architecture documentation covering network design, security, and operational details
+- **[OBSERVABILITY.md](docs/OBSERVABILITY.md)** - Complete guide to the observability stack (Prometheus, Loki, Tempo, Grafana, OpenTelemetry)
 - **[CLAUDE.md](CLAUDE.md)** - Development guide for working with this repository using Claude Code
 
 ## License
