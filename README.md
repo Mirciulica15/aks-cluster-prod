@@ -6,6 +6,7 @@ This project aims to provide a **management** Azure Kubernetes Service (AKS) clu
 
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Comprehensive technical architecture documentation covering network design, security, and operational details
 - **[OBSERVABILITY.md](docs/OBSERVABILITY.md)** - Complete guide to the observability stack (Prometheus, Loki, Tempo, Grafana, OpenTelemetry)
+- **[ARGOCD.md](docs/ARGOCD.md)** - GitOps continuous delivery with Argo CD, including multi-tenancy and team onboarding
 - **[CLAUDE.md](CLAUDE.md)** - Development guide for working with this repository using Claude Code
 
 ## License

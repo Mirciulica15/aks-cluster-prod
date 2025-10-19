@@ -1,0 +1,117 @@
+# Example Argo CD AppProject for Team Namespace Isolation
+# This is a template that teams can use to create their own AppProjects
+# AppProjects should be managed in team repositories, not in this core infrastructure repo
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-example
+  namespace: argocd
+  labels:
+    team: example
+spec:
+  # Description
+  description: "AppProject for Team Example with namespace isolation"
+
+  # Source repositories (Git repos this team can sync from)
+  sourceRepos:
+    - "https://github.com/your-org/team-example-*"     # All repos matching pattern
+    - "https://github.com/your-org/shared-manifests"   # Shared repository
+
+  # Destinations (where this team can deploy applications)
+  destinations:
+    - namespace: "team-example-*"  # Wildcard: all namespaces starting with team-example-
+      server: "https://kubernetes.default.svc"
+    - namespace: "team-example-dev"
+      server: "https://kubernetes.default.svc"
+    - namespace: "team-example-staging"
+      server: "https://kubernetes.default.svc"
+    - namespace: "team-example-prod"
+      server: "https://kubernetes.default.svc"
+
+  # Cluster resource whitelist (what cluster-scoped resources can be deployed)
+  clusterResourceWhitelist: []
+  # Example: Allow creating namespaces (if teams need to self-provision)
+  # - group: ""
+  #   kind: "Namespace"
+
+  # Namespace resource whitelist (what namespaced resources can be deployed)
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  # Namespace resource blacklist (deny specific resources)
+  namespaceResourceBlacklist: []
+  # Example: Prevent teams from creating ResourceQuotas
+  # - group: ""
+  #   kind: "ResourceQuota"
+
+  # Roles for RBAC within this AppProject
+  roles:
+    - name: admin
+      description: "Admin role for Team Example"
+      policies:
+        - "p, proj:team-example:admin, applications, *, team-example/*, allow"
+        - "p, proj:team-example:admin, repositories, *, team-example/*, allow"
+        - "p, proj:team-example:admin, logs, get, team-example/*, allow"
+        - "p, proj:team-example:admin, exec, create, team-example/*, allow"
+      groups:
+        - "AKS-Team-Example"  # Azure AD group
+
+    - name: developer
+      description: "Developer role for Team Example (read-only)"
+      policies:
+        - "p, proj:team-example:developer, applications, get, team-example/*, allow"
+        - "p, proj:team-example:developer, applications, list, team-example/*, allow"
+        - "p, proj:team-example:developer, logs, get, team-example/*, allow"
+      groups:
+        - "AKS-Team-Example-Developers"
+
+  # Sync windows (optional - restrict when syncs can happen)
+  syncWindows: []
+  # Example: Block syncs to production during business hours
+  # - kind: deny
+  #   schedule: "0 9-17 * * 1-5"  # Mon-Fri 9AM-5PM
+  #   duration: "8h"
+  #   applications:
+  #     - "*prod*"
+  #   namespaces:
+  #     - "team-example-prod"
+
+  # Orphaned resources (what to do with resources not in Git)
+  orphanedResources:
+    warn: true  # Warn about orphaned resources (don't auto-delete)
+
+---
+# Example Application using the AppProject
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: team-example-app
+  namespace: argocd
+spec:
+  # Reference the AppProject
+  project: team-example
+
+  # Source repository
+  source:
+    repoURL: "https://github.com/your-org/team-example-app"
+    targetRevision: "main"
+    path: "k8s/manifests"
+
+  # Destination
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: "team-example-dev"
+
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources not in Git
+      selfHeal: true   # Auto-sync when drift detected
+    syncOptions:
+      - CreateNamespace=false  # Don't auto-create namespace (should exist)
+      - PruneLast=true         # Delete resources last during sync
+
+  # Ignore differences (optional)
+  ignoreDifferences: []

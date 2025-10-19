@@ -10,6 +10,7 @@ This document provides a technical overview of the AKS-based management cluster 
 - [Network Architecture](#network-architecture)
 - [Security Architecture](#security-architecture)
 - [Observability Stack](#observability-stack)
+- [GitOps and Continuous Delivery](#gitops-and-continuous-delivery)
 - [Resource Naming Convention](#resource-naming-convention)
 - [High Availability & Scalability](#high-availability--scalability)
 - [Cost Optimization](#cost-optimization)
@@ -449,6 +450,55 @@ See **[OBSERVABILITY.md](OBSERVABILITY.md)** for the complete guide.
 - Azure Monitor alerts on cluster health
 - Log Analytics queries for anomaly detection
 - Integration with notification channels
+
+## GitOps and Continuous Delivery
+
+### Argo CD
+
+The cluster includes **Argo CD** for GitOps-based continuous delivery, enabling teams to manage their Kubernetes applications declaratively using Git as the single source of truth.
+
+**Components:**
+- **Argo CD Server** - Web UI and API (2 replicas for HA)
+- **Application Controller** - Reconciliation engine (1 replica)
+- **Repo Server** - Git repository interaction (2 replicas)
+- **Dex** - OAuth2 proxy for Azure AD SSO
+- **Redis** - Caching layer
+- **ApplicationSet Controller** - App-of-apps pattern support
+
+**Multi-Tenancy Features:**
+- **AppProjects** - Namespace-level isolation per team
+- **RBAC** - Azure AD group-based access control
+- **Repository Restrictions** - Teams limited to specific Git repos
+- **Destination Restrictions** - Teams limited to specific namespaces
+- **Sync Windows** - Optional deployment time restrictions
+
+**Architecture Highlights:**
+- Azure AD SSO integration (matching Grafana setup)
+- Prometheus metrics integration for observability
+- High availability with pod anti-affinity rules
+- Namespace isolation via AppProject boundaries
+
+**Access Method:**
+
+```bash
+# Port forward to access UI
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+# Open https://localhost:8080
+
+# Get admin password
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+```
+
+### Detailed Documentation
+
+For comprehensive Argo CD documentation, including:
+- Team onboarding guide
+- AppProject setup and namespace isolation
+- Application deployment patterns
+- RBAC configuration
+- Best practices for GitOps workflows
+
+See **[ARGOCD.md](ARGOCD.md)** for the complete guide.
 
 ## Resource Naming Convention
 

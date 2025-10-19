@@ -63,3 +63,17 @@ variable "azure_ad_grafana_client_secret" {
   type        = string
   sensitive   = true
 }
+
+# Argo CD Variables
+
+variable "azure_ad_argocd_client_id" {
+  description = "Azure AD Application (Client) ID for Argo CD OAuth2"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_ad_argocd_client_secret" {
+  description = "Azure AD Application Client Secret for Argo CD OAuth2"
+  type        = string
+  sensitive   = true
+}
