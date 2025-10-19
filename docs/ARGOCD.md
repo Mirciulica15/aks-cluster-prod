@@ -188,20 +188,20 @@ terraform apply
 
 #### 3. Access Argo CD UI
 
-**Option A: Port Forward (Development)**
+**Option A: Public HTTPS Access (Recommended)**
+
+ArgoCD is publicly accessible via HTTPS with Azure AD authentication:
+- URL: `https://argocd.<INGRESS_IP>.nip.io`
+- Authentication: Azure AD SSO via Dex
+- Get the URL: `terraform output argocd_url`
+- See [INGRESS.md](INGRESS.md) for detailed access instructions
+
+**Option B: Port Forward (Development/Troubleshooting)**
 
 ```bash
 kubectl port-forward -n argocd svc/argocd-server 8080:443
+# Then open: https://localhost:8080
 ```
-
-Then open: https://localhost:8080
-
-**Option B: Ingress (Production - requires ingress controller)**
-
-Update `infrastructure/argocd-helm.tf`:
-- Set `global.domain` to your actual domain
-- Enable `server.ingress.enabled = true`
-- Add TLS certificate configuration
 
 #### 4. Get Admin Password
 

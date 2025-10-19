@@ -429,6 +429,12 @@ In addition to the main observability stack, the cluster uses Cilium's Hubble fo
 
 **Access Method:**
 
+Publicly accessible via HTTPS with Azure AD authentication:
+- URL: `https://hubble.<INGRESS_IP>.nip.io`
+- Authentication: OAuth2 Proxy with Azure AD
+- See [INGRESS.md](INGRESS.md) for detailed access instructions
+
+Alternative (port-forward):
 ```bash
 kubectl port-forward -n kube-system svc/hubble-ui 12000:80
 # Open http://localhost:12000
@@ -480,13 +486,15 @@ The cluster includes **Argo CD** for GitOps-based continuous delivery, enabling 
 
 **Access Method:**
 
+Publicly accessible via HTTPS with Azure AD authentication:
+- URL: `https://argocd.<INGRESS_IP>.nip.io`
+- Authentication: Azure AD SSO via Dex
+- See [ARGOCD.md](ARGOCD.md) and [INGRESS.md](INGRESS.md) for detailed access instructions
+
+Alternative (port-forward):
 ```bash
-# Port forward to access UI
 kubectl port-forward -n argocd svc/argocd-server 8080:443
 # Open https://localhost:8080
-
-# Get admin password
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
 ```
 
 ### Detailed Documentation

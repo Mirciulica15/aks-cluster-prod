@@ -4,7 +4,7 @@
 
 param(
     [string]$AppName = "ArgoCD-Management-Cluster",
-    [string]$ArgoCDURL = "https://argocd.yourdomain.com", # Update this with your actual Argo CD URL
+    [string]$ArgoCDURL, # Will be fetched from Terraform output if not provided
     [string]$EnvFilePath = "$PSScriptRoot\..\infrastructure\.env"
 )
 
@@ -13,6 +13,22 @@ Write-Host "Creating Azure AD App Registration for Argo CD..." -ForegroundColor 
 # Get current tenant ID
 $tenantId = az account show --query tenantId -o tsv
 Write-Host "Current Tenant ID: $tenantId" -ForegroundColor Cyan
+
+# Get ArgoCD URL from Terraform output if not provided
+if (-not $ArgoCDURL) {
+    Write-Host "Fetching ArgoCD URL from Terraform output..." -ForegroundColor Cyan
+    Push-Location "$PSScriptRoot\..\infrastructure"
+    $ArgoCDURL = terraform output -raw argocd_url 2>$null
+    Pop-Location
+
+    if (-not $ArgoCDURL) {
+        Write-Host "Error: Could not fetch ArgoCD URL from Terraform output." -ForegroundColor Red
+        Write-Host "Please provide -ArgoCDURL parameter or ensure Terraform has been applied." -ForegroundColor Red
+        exit 1
+    }
+}
+
+Write-Host "ArgoCD URL: $ArgoCDURL" -ForegroundColor Cyan
 
 # Check if app already exists
 $existingApp = az ad app list --display-name $AppName --query "[0]" | ConvertFrom-Json
@@ -39,21 +55,46 @@ if ($existingApp) {
 }
 
 # Add Microsoft Graph API permissions for user profile and group membership
-Write-Host "Configuring API permissions..." -ForegroundColor Cyan
+Write-Host "`nConfiguring API permissions..." -ForegroundColor Cyan
 
 # User.Read (delegated) - Sign in and read user profile
+Write-Host "  Adding User.Read permission..." -ForegroundColor White
 az ad app permission add `
     --id $objectId `
     --api 00000003-0000-0000-c000-000000000000 `
-    --api-permissions e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope
+    --api-permissions e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope 2>$null
 
 # GroupMember.Read.All (delegated) - Read group memberships
+Write-Host "  Adding GroupMember.Read.All permission..." -ForegroundColor White
 az ad app permission add `
     --id $objectId `
     --api 00000003-0000-0000-c000-000000000000 `
-    --api-permissions bc024368-1153-4739-b217-4326f2e966d0=Scope
+    --api-permissions bc024368-1153-4739-b217-4326f2e966d0=Scope 2>$null
 
-Write-Host "API permissions configured. Admin consent may be required." -ForegroundColor Yellow
+# Group.Read.All (delegated) - Read all groups (needed for Dex Microsoft connector)
+Write-Host "  Adding Group.Read.All permission..." -ForegroundColor White
+az ad app permission add `
+    --id $objectId `
+    --api 00000003-0000-0000-c000-000000000000 `
+    --api-permissions 5f8c59db-677d-491f-a6b8-5f174b11ec1d=Scope 2>$null
+
+Write-Host "✓ API permissions configured" -ForegroundColor Green
+
+# Configure group membership claims in token
+Write-Host "`nConfiguring group membership claims..." -ForegroundColor Cyan
+az ad app update --id $objectId --set groupMembershipClaims=SecurityGroup 2>$null
+Write-Host "✓ Group membership claims configured (SecurityGroup)" -ForegroundColor Green
+
+# Grant admin consent for API permissions
+Write-Host "`nGranting admin consent for API permissions..." -ForegroundColor Cyan
+try {
+    az ad app permission admin-consent --id $objectId 2>$null
+    Write-Host "✓ Admin consent granted successfully" -ForegroundColor Green
+} catch {
+    Write-Host "⚠ Could not automatically grant admin consent." -ForegroundColor Yellow
+    Write-Host "  Please grant admin consent manually in Azure Portal:" -ForegroundColor Yellow
+    Write-Host "  https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/CallAnAPI/appId/$appId" -ForegroundColor Cyan
+}
 
 # Generate a client secret (valid for 2 years)
 Write-Host "Generating client secret..." -ForegroundColor Cyan
@@ -95,18 +136,18 @@ if ($envContent -match "TF_VAR_azure_ad_argocd_client_id") {
 Write-Host ".env file updated successfully!" -ForegroundColor Green
 
 # Summary
-Write-Host "`n========================================" -ForegroundColor Green
-Write-Host "Azure AD App Registration Summary" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "App Name:         $AppName"
-Write-Host "Tenant ID:        $tenantId"
-Write-Host "Application ID:   $appId"
-Write-Host "Redirect URIs:    $ArgoCDURL/auth/callback"
-Write-Host "                  $ArgoCDURL/api/dex/callback"
-Write-Host "`nClient secret has been saved to .env file" -ForegroundColor Yellow
+Write-Host "`n=== Setup Complete ===" -ForegroundColor Green
+Write-Host "App Registration Details:" -ForegroundColor Cyan
+Write-Host "  Name:         $AppName" -ForegroundColor White
+Write-Host "  Tenant ID:    $tenantId" -ForegroundColor White
+Write-Host "  App ID:       $appId" -ForegroundColor White
+Write-Host "  Redirect URI: $ArgoCDURL/api/dex/callback" -ForegroundColor White
+Write-Host "`nAPI Permissions:" -ForegroundColor Cyan
+Write-Host "  • User.Read (Delegated)" -ForegroundColor White
+Write-Host "  • GroupMember.Read.All (Delegated)" -ForegroundColor White
+Write-Host "  • Group.Read.All (Delegated)" -ForegroundColor White
 Write-Host "`nNext steps:" -ForegroundColor Cyan
-Write-Host "1. Update ArgoCDURL parameter if you have a custom domain"
-Write-Host "2. Grant admin consent for API permissions in Azure Portal (optional)"
-Write-Host "3. Run 'source infrastructure/.env' to load environment variables"
-Write-Host "4. Run 'terraform plan' and 'terraform apply' to deploy Argo CD"
-Write-Host "========================================`n" -ForegroundColor Green
+Write-Host "  1. Run 'direnv allow' in the infrastructure directory" -ForegroundColor White
+Write-Host "  2. Run 'terraform plan' to verify configuration" -ForegroundColor White
+Write-Host "  3. Run 'terraform apply' to deploy ArgoCD with Azure AD SSO" -ForegroundColor White
+Write-Host "  4. Access ArgoCD at: $ArgoCDURL" -ForegroundColor White

@@ -193,24 +193,30 @@ See [OpenTelemetry documentation](https://opentelemetry.io/docs/languages/) for 
 
 ## Accessing Grafana
 
+### Public HTTPS Access (Recommended)
+
+Grafana is publicly accessible via HTTPS with Azure AD authentication:
+- URL: `https://grafana.<INGRESS_IP>.nip.io`
+- Authentication: Azure AD OAuth with automatic role mapping
+- Get the URL: `terraform output grafana_url`
+- See [INGRESS.md](INGRESS.md) for detailed access instructions
+
+**Role Mapping:**
+- Users in `AKS-Platform-Team` group → Admin role
+- All other authenticated users → Editor role (default)
+
 ### Local Development (Port Forward)
+
+For troubleshooting or local development:
 
 ```bash
 kubectl port-forward -n observability svc/kube-prometheus-stack-grafana 3000:80
+# Then access at http://localhost:3000
 ```
-
-Then access at `http://localhost:3000`
 
 **Note**: Azure AD SSO won't work with port-forward due to redirect URI mismatch. Use local admin credentials:
 - Username: `admin`
 - Password: `changeme`
-
-### Production Access (Future)
-
-Once an ingress controller is deployed:
-1. Configure ingress with TLS certificate (cert-manager + Let's Encrypt)
-2. Update Azure AD redirect URI to match public domain
-3. Update Grafana `root_url` in Helm values to match public URL
 
 ## Pre-configured Dashboards
 

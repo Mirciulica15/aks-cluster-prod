@@ -73,6 +73,11 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana = {
         enabled = true
 
+        # Deployment strategy (Recreate to avoid MultiAttachVolume errors with Azure Disk)
+        deploymentStrategy = {
+          type = "Recreate"
+        }
+
         # Disable default datasources (we'll define our own)
         sidecar = {
           datasources = {
@@ -86,21 +91,22 @@ resource "helm_release" "kube_prometheus_stack" {
         # Grafana configuration
         "grafana.ini" = {
           server = {
-            root_url = "http://grafana.observability.svc.cluster.local"
+            root_url = "https://grafana.${azurerm_public_ip.ingress.ip_address}.nip.io"
           }
 
           # Azure AD SSO configuration (OAuth2)
           "auth.generic_oauth" = {
-            enabled             = true
-            name                = "Azure AD"
-            allow_sign_up       = true
-            client_id           = "$__env{AZURE_AD_CLIENT_ID}"
-            client_secret       = "$__env{AZURE_AD_CLIENT_SECRET}"
-            scopes              = "openid email profile"
-            auth_url            = "https://login.microsoftonline.com/$__env{AZURE_AD_TENANT_ID}/oauth2/v2.0/authorize"
-            token_url           = "https://login.microsoftonline.com/$__env{AZURE_AD_TENANT_ID}/oauth2/v2.0/token"
-            api_url             = "https://graph.microsoft.com/v1.0/me"
-            role_attribute_path = "contains(groups[*], 'AKS-Platform-Team') && 'Admin' || 'Viewer'"
+            enabled       = true
+            name          = "Azure AD"
+            allow_sign_up = true
+            client_id     = "$__env{AZURE_AD_CLIENT_ID}"
+            client_secret = "$__env{AZURE_AD_CLIENT_SECRET}"
+            scopes        = "openid email profile"
+            auth_url      = "https://login.microsoftonline.com/$__env{AZURE_AD_TENANT_ID}/oauth2/v2.0/authorize"
+            token_url     = "https://login.microsoftonline.com/$__env{AZURE_AD_TENANT_ID}/oauth2/v2.0/token"
+            api_url       = "https://graph.microsoft.com/v1.0/me"
+            # Role mapping: Platform Team gets Admin, everyone else gets Editor (can use Explore, create dashboards)
+            role_attribute_path = "contains(groups[*], 'AKS-Platform-Team') && 'Admin' || 'Editor'"
           }
 
           # Security settings
@@ -111,7 +117,7 @@ resource "helm_release" "kube_prometheus_stack" {
           # Users settings
           users = {
             auto_assign_org      = true
-            auto_assign_org_role = "Viewer" # Default role, overridden by OAuth mapping
+            auto_assign_org_role = "Editor" # Default role, overridden by OAuth mapping
           }
         }
 
@@ -266,7 +272,8 @@ resource "helm_release" "kube_prometheus_stack" {
 
   depends_on = [
     kubernetes_namespace.observability,
-    kubernetes_secret.grafana_azure_ad
+    kubernetes_secret.grafana_azure_ad,
+    azurerm_public_ip.ingress
   ]
 }
 

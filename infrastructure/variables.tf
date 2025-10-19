@@ -77,3 +77,23 @@ variable "azure_ad_argocd_client_secret" {
   type        = string
   sensitive   = true
 }
+
+# OAuth2 Proxy Variables (for services without built-in auth)
+
+variable "oauth2_proxy_hubble_client_id" {
+  description = "Azure AD Application (Client) ID for OAuth2 Proxy (Hubble UI)"
+  type        = string
+  sensitive   = true
+}
+
+variable "oauth2_proxy_hubble_client_secret" {
+  description = "Azure AD Application Client Secret for OAuth2 Proxy (Hubble UI)"
+  type        = string
+  sensitive   = true
+}
+
+variable "oauth2_proxy_cookie_secret" {
+  description = "Cookie secret for OAuth2 Proxy (base64 encoded, 32 bytes)"
+  type        = string
+  sensitive   = true
+}

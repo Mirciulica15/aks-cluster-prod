@@ -16,8 +16,8 @@ resource "helm_release" "argocd" {
     yamlencode({
       # Global configuration
       global = {
-        # Domain configuration (update when you have ingress)
-        domain = "argocd.yourdomain.com" # TODO: Update with actual domain
+        # Domain configuration for Argo CD
+        domain = "argocd.${azurerm_public_ip.ingress.ip_address}.nip.io"
 
         # Network policy (optional, can enable later)
         networkPolicy = {
@@ -241,8 +241,8 @@ resource "helm_release" "argocd" {
       configs = {
         # Main Argo CD configuration
         cm = {
-          # URL for OAuth redirect (update when you have ingress)
-          url = "https://argocd.yourdomain.com" # TODO: Update with actual URL
+          # URL for OAuth redirect
+          url = "https://argocd.${azurerm_public_ip.ingress.ip_address}.nip.io"
 
           # Azure AD SSO via Dex
           "dex.config" = yamlencode({
@@ -252,13 +252,11 @@ resource "helm_release" "argocd" {
                 id   = "azure-ad"
                 name = "Azure AD"
                 config = {
-                  clientID     = "$argocd-azure-ad-secret:client_id"
-                  clientSecret = "$argocd-azure-ad-secret:client_secret"
-                  tenant       = "$argocd-azure-ad-secret:tenant_id"
-                  redirectURI  = "https://argocd.yourdomain.com/api/dex/callback" # TODO: Update
-
-                  # Request group membership for RBAC
-                  groups = ["id", "displayName"]
+                  clientID     = var.azure_ad_argocd_client_id
+                  clientSecret = var.azure_ad_argocd_client_secret
+                  tenant       = var.azure_ad_tenant_id
+                  redirectURI  = "https://argocd.${azurerm_public_ip.ingress.ip_address}.nip.io/api/dex/callback"
+                  # Don't filter groups - allow all groups to be returned
                 }
               }
             ]
@@ -341,7 +339,8 @@ resource "helm_release" "argocd" {
   depends_on = [
     kubernetes_namespace.argocd,
     kubernetes_secret.argocd_azure_ad,
-    helm_release.kube_prometheus_stack
+    helm_release.kube_prometheus_stack,
+    azurerm_public_ip.ingress
   ]
 }
 
